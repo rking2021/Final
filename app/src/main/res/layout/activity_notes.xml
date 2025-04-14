@@ -1,0 +1,33 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <!-- Button to open Add Note Dialog -->
+    <Button
+        android:id="@+id/addNoteButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add Note"
+        android:textColor="#ffffff"
+        android:background="#FF4081"/>
+
+    <!-- RecyclerView to display the list of notes -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/notesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"/>
+
+    <!-- EditText to input new note -->
+    <EditText
+        android:id="@+id/noteInputField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter your note here"
+        android:inputType="text" />
+</LinearLayout>
+
+

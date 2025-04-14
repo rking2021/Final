@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:scaleType="centerCrop"
+        android:layout_marginBottom="16dp"
+        android:background="#DDD" />
+
+    <Button
+        android:id="@+id/pickImage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Pick Image from Gallery" />
+
+    <TextView
+        android:id="@+id/resultText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Prediction will appear here"
+        android:textSize="18sp"
+        android:layout_marginTop="16dp" />
+</LinearLayout>
