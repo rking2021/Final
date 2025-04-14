@@ -1,0 +1,193 @@
+model: 
+
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, Dropout, GlobalAveragePooling2D
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+import matplotlib.pyplot as plt
+
+# Paths to your dataset
+train_dir = r"C:\Users\Rayna\Desktop\PythonProject1\dataset\train"
+val_dir = r"C:\Users\Rayna\Desktop\PythonProject1\dataset\val"
+test_dir = r"C:\Users\Rayna\Desktop\PythonProject1\dataset\test"
+
+# Parameters
+IMG_SIZE = (224, 224)
+BATCH_SIZE = 32
+INITIAL_EPOCHS = 30
+FINE_TUNE_EPOCHS = 15
+LEARNING_RATE = 0.0001
+FINE_TUNE_LEARNING_RATE = 1e-5
+
+#  Image Augmentation
+train_datagen = ImageDataGenerator(
+    rescale=1.0 / 255,
+    rotation_range=30,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+val_datagen = ImageDataGenerator(rescale=1.0 / 255)
+test_datagen = ImageDataGenerator(rescale=1.0 / 255)
+
+# Generators
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    target_size=IMG_SIZE,
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
+
+val_generator = val_datagen.flow_from_directory(
+    val_dir,
+    target_size=IMG_SIZE,
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
+
+test_generator = test_datagen.flow_from_directory(
+    test_dir,
+    target_size=IMG_SIZE,
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
+
+#  Load VGG16 with pre-trained weights
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+
+# Freeze all layers initially
+for layer in base_model.layers:
+    layer.trainable = False
+
+# Add custom layers
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Dense(512, activation='relu')(x)  # Increased neuron count
+x = Dropout(0.5)(x)
+output = Dense(len(train_generator.class_indices), activation='softmax')(x)
+
+# Create the full model
+model = Model(inputs=base_model.input, outputs=output)
+
+#  Compile the model
+model.compile(optimizer=Adam(learning_rate=LEARNING_RATE),
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+#  Callbacks
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, verbose=1)
+
+#  Initial training (with frozen base layers)
+history = model.fit(
+    train_generator,
+    validation_data=val_generator,
+    epochs=INITIAL_EPOCHS,
+    steps_per_epoch=len(train_generator),
+    validation_steps=len(val_generator),
+    callbacks=[early_stopping, reduce_lr]
+)
+
+# Fine-Tuning: Unfreeze the top layers
+# Unfreeze the last 10 layers of VGG16 for fine-tuning
+for layer in base_model.layers[-10:]:
+    layer.trainable = True
+
+# Compile with a smaller learning rate for fine-tuning
+model.compile(optimizer=Adam(learning_rate=FINE_TUNE_LEARNING_RATE),
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+#  Fine-tuning phase
+fine_tune_history = model.fit(
+    train_generator,
+    validation_data=val_generator,
+    epochs=FINE_TUNE_EPOCHS,
+    steps_per_epoch=len(train_generator),
+    validation_steps=len(val_generator),
+    callbacks=[early_stopping, reduce_lr]
+)
+
+#  Save the fine-tuned model
+model.save("flower_model_fine_tuned.h5")
+
+#  Plot training history
+def plot_history(histories, initial_epochs):
+    plt.figure(figsize=(12, 6))
+
+    # Combine training and fine-tuning histories
+    acc = histories[0].history['accuracy'] + histories[1].history['accuracy']
+    val_acc = histories[0].history['val_accuracy'] + histories[1].history['val_accuracy']
+    loss = histories[0].history['loss'] + histories[1].history['loss']
+    val_loss = histories[0].history['val_loss'] + histories[1].history['val_loss']
+
+    # Plot accuracy
+    plt.subplot(1, 2, 1)
+    plt.plot(acc, label='Train Accuracy')
+    plt.plot(val_acc, label='Val Accuracy')
+    plt.axvline(initial_epochs - 1, color='r', linestyle='--', label='Start Fine-Tuning')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+
+    # Plot loss
+    plt.subplot(1, 2, 2)
+    plt.plot(loss, label='Train Loss')
+    plt.plot(val_loss, label='Val Loss')
+    plt.axvline(initial_epochs - 1, color='r', linestyle='--', label='Start Fine-Tuning')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+
+    plt.show()
+
+
+plot_history([history, fine_tune_history], INITIAL_EPOCHS)
+
+#  Evaluate the model on the test set
+test_loss, test_acc = model.evaluate(test_generator)
+print(f'Test Accuracy after Fine-Tuning: {test_acc * 100:.2f}%')
+
+
+labels:
+
+import os
+import json
+
+# Path to your test dataset
+test_dir = r"C:\Users\Rayna\Desktop\PythonProject1\dataset\test"
+
+# Get the class labels from the folder names
+class_labels = sorted(os.listdir(test_dir))
+
+# Save labels to a JSON file
+json_path = r"C:\Users\Rayna\Desktop\PythonProject1\class_labels.json"
+
+# Write to JSON
+with open(json_path, 'w') as f:
+    json.dump(class_labels, f, indent=4)
+
+print(f"Class labels saved to {json_path}: {class_labels}")
+
+Transfer:
+
+import tensorflow as tf
+
+model_path = r"C:\Users\Rayna\Desktop\PythonProject1\flower_model_fine_tuned.h5"
+model = tf.keras.models.load_model(model_path)
+
+
+# Convert the model to TFLite format
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+tflite_model = converter.convert()
+
+# Save the TFLite model
+with open("flower_model.tflite", "wb") as f:
+    f.write(tflite_model)
